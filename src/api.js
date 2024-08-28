@@ -1,15 +1,19 @@
 import axios from 'axios';
 
 export default class ApiService {
-  constructor() {
-    this.query = '';
-    this.page = 1;
+  constructor(query = '', page = 1) {
+    this.query = query;
+    this.page = page;
     this.url = 'https://pixabay.com/api/';
+  }
+
+  resetPage() {
+    this.page = 1;
   }
 
   async fetchCard() {
     const params = {
-      key: '39155276-6bb78cfc3029a8ff9cc1c0e7d',
+      key: '45501935-0911994d2592de4efac5f061b',
       q: this.query,
       image_type: 'photo',
       orientation: 'horizontal',
@@ -18,8 +22,13 @@ export default class ApiService {
       page: this.page,
     };
 
-    const response = await axios.get(this.url, { params });
-
-    return response.data;
+    try {
+      const response = await axios.get(this.url, { params });
+      this.page += 1;
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching data:', error);
+      throw new Error('Failed to fetch data from API');
+    }
   }
 }
