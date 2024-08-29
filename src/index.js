@@ -35,7 +35,6 @@ async function onSearch(evt) {
 
   try {
     const cards = await apiService.fetchCard();
-    Notiflix.Notify.success(`Hooray! We found ${cards.totalHits} images.`);
 
     if (cards.hits.length === 0) {
       Notiflix.Notify.failure(
@@ -45,6 +44,7 @@ async function onSearch(evt) {
     }
 
     createMarkup(cards.hits);
+    Notiflix.Notify.success(`Hooray! We found ${cards.totalHits} images.`);
     loadMore.classList.remove('is-hidden');
   } catch (error) {
     console.log(error);
@@ -63,6 +63,8 @@ async function onLoadmore() {
         "We're sorry, but you've reached the end of search results."
       );
     }
+
+    smoothScroll(); // Плавная прокрутка после добавления новых изображений
   } catch (error) {
     console.log(error);
   }
@@ -81,6 +83,7 @@ function createMarkup(arr) {
         downloads,
       }) => {
         return `<div class="photo-card">
+        <a href="${largeImageURL}" class="link simplelightbox">
   <img src="${webformatURL}" alt="${tags}" loading="lazy" />
   <div class="info">
     <p class="info-item">
@@ -99,14 +102,32 @@ function createMarkup(arr) {
       <b>Downloads</b>
       <span>${downloads}</span>
     </p>
+    
   </div>
+  </a>
 </div>`;
       }
     )
     .join('');
   galleryEl.insertAdjacentHTML('beforeend', markup);
+  gallery.refresh();
 }
 
 function clearContainer() {
   galleryEl.innerHTML = '';
+}
+
+let gallery = new SimpleLightbox('.simplelightbox', {
+  captionsData: 'alt',
+  captionDelay: 250,
+});
+
+function smoothScroll() {
+  const { height: cardHeight } =
+    galleryEl.firstElementChild.getBoundingClientRect();
+
+  window.scrollBy({
+    top: cardHeight * 2,
+    behavior: 'smooth',
+  });
 }
