@@ -25,14 +25,13 @@ let options = {
 };
 
 let observer = new IntersectionObserver(onIntersection, options);
-// let isObserved = false;
 
 // Событие отправки формы
 formEl.addEventListener('submit', onSearch);
 
 // Функция обработки запроса
 async function onSearch(evt) {
-  evt.preventDefault(); // убираем действия по умолчанию
+  evt.preventDefault();
 
   const searchQuery = formEl.elements.searchQuery.value;
 
@@ -69,9 +68,6 @@ async function onSearch(evt) {
 
 // Функция IntersectionObserver
 function onIntersection(entries, observer) {
-  // isObserved = true;
-  // console.log(isObserved);
-
   entries.forEach(entry => {
     if (entry.isIntersecting) {
       onLoadmore();
@@ -139,7 +135,7 @@ async function onLoadmore() {
         "We're sorry, but you've reached the end of search results."
       );
       observer.unobserve(target); // Отключаем Observer, если больше нечего загружать
-      // isObserved = false;
+
       return;
     }
 
