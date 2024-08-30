@@ -25,6 +25,7 @@ let options = {
 };
 
 let observer = new IntersectionObserver(onIntersection, options);
+// let isObserved = false;
 
 // Событие отправки формы
 formEl.addEventListener('submit', onSearch);
@@ -44,6 +45,7 @@ async function onSearch(evt) {
 
   apiService.resetPage();
   clearContainer();
+  observer.unobserve(target);
 
   try {
     const cards = await apiService.fetchCard();
@@ -56,9 +58,9 @@ async function onSearch(evt) {
     }
 
     createMarkup(cards.hits);
-    Notiflix.Notify.success(`Hooray! We found ${cards.totalHits} images.`);
+    observer.observe(target);
 
-    observer.observe(target); // Наблюдаем за элементом для бесконечной прокрутки
+    Notiflix.Notify.success(`Hooray! We found ${cards.totalHits} images.`);
   } catch (error) {
     console.log(error);
     Notiflix.Notify.failure('Something went wrong. Please try again.');
@@ -67,6 +69,9 @@ async function onSearch(evt) {
 
 // Функция IntersectionObserver
 function onIntersection(entries, observer) {
+  // isObserved = true;
+  // console.log(isObserved);
+
   entries.forEach(entry => {
     if (entry.isIntersecting) {
       onLoadmore();
@@ -128,27 +133,29 @@ async function onLoadmore() {
   try {
     const cards = await apiService.fetchCard(); // Загружаем дополнительные результаты
     createMarkup(cards.hits); // Добавляем новые результаты в галерею
-
-    if (apiService.page !== 0 && cards.hits.length === 0) {
+    const totalLoadedImages = (apiService.page - 1) * apiService.per_page;
+    if (totalLoadedImages >= cards.totalHits) {
       Notiflix.Notify.failure(
         "We're sorry, but you've reached the end of search results."
       );
-      observer.disconnect(); // Отключаем Observer, если больше нечего загружать
+      observer.unobserve(target); // Отключаем Observer, если больше нечего загружать
+      // isObserved = false;
+      return;
     }
 
-    // smoothScroll(); // Плавная прокрутка после добавления новых изображений
+    smoothScroll(); // Плавная прокрутка после добавления новых изображений
   } catch (error) {
     console.log(error);
   }
 }
 
 // Функция для плавной прокрутки
-// function smoothScroll() {
-//   const { height: cardHeight } =
-//     galleryEl.firstElementChild.getBoundingClientRect();
+function smoothScroll() {
+  const { height: cardHeight } =
+    galleryEl.firstElementChild.getBoundingClientRect();
 
-//   window.scrollBy({
-//     top: cardHeight * 2,
-//     behavior: 'smooth',
-//   });
-// }
+  window.scrollBy({
+    top: cardHeight * 2,
+    behavior: 'smooth',
+  });
+}
