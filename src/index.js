@@ -3,22 +3,35 @@ import ApiService from './api';
 import SimpleLightbox from 'simplelightbox';
 import 'simplelightbox/dist/simple-lightbox.min.css';
 
+// Элементы DOM
 const formEl = document.querySelector('.search-form');
-const loadMore = document.querySelector('.load-more');
 const galleryEl = document.querySelector('.gallery');
+const target = document.querySelector('.js-guard');
 
+// Инициализация ApiService
 const apiService = new ApiService();
 
-loadMore.classList.add('is-hidden'); // спрятали кнопку load more при загрузке страницы
+// Настройка SimpleLightbox
+let gallery = new SimpleLightbox('.simplelightbox', {
+  captionsData: 'alt',
+  captionDelay: 250,
+});
 
+// Настройка  IntersectionObserver
+let options = {
+  root: null, // Будет использоваться видимая область
+  rootMargin: '500px', // Зона срабатывания раньше
+  threshold: 1.0,
+};
+
+let observer = new IntersectionObserver(onIntersection, options);
+
+// Событие отправки формы
 formEl.addEventListener('submit', onSearch);
-loadMore.addEventListener('click', onLoadmore);
 
+// Функция обработки запроса
 async function onSearch(evt) {
   evt.preventDefault(); // убираем действия по умолчанию
-
-  // let { searchQuery } = formEl; // Получаем значение input
-  // apiService.query = searchQuery.value;
 
   const searchQuery = formEl.elements.searchQuery.value;
 
@@ -31,7 +44,6 @@ async function onSearch(evt) {
 
   apiService.resetPage();
   clearContainer();
-  loadMore.classList.add('is-hidden'); // Прячем loadmore перед новым поиском
 
   try {
     const cards = await apiService.fetchCard();
@@ -45,31 +57,24 @@ async function onSearch(evt) {
 
     createMarkup(cards.hits);
     Notiflix.Notify.success(`Hooray! We found ${cards.totalHits} images.`);
-    loadMore.classList.remove('is-hidden');
+
+    observer.observe(target); // Наблюдаем за элементом для бесконечной прокрутки
   } catch (error) {
     console.log(error);
     Notiflix.Notify.failure('Something went wrong. Please try again.');
   }
 }
 
-async function onLoadmore() {
-  try {
-    const cards = await apiService.fetchCard(); // Загружаем дополнительные результаты
-    createMarkup(cards.hits); // Добавляем новые результаты в галерею
-
-    if (cards.hits.length === 0) {
-      loadMore.classList.add('is-hidden'); // Скрываем кнопку, если больше нечего загружать
-      Notiflix.Notify.failure(
-        "We're sorry, but you've reached the end of search results."
-      );
+// Функция IntersectionObserver
+function onIntersection(entries, observer) {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      onLoadmore();
     }
-
-    smoothScroll(); // Плавная прокрутка после добавления новых изображений
-  } catch (error) {
-    console.log(error);
-  }
+  });
 }
 
+// Функция создания разметки для галереи
 function createMarkup(arr) {
   const markup = arr
     .map(
@@ -110,24 +115,40 @@ function createMarkup(arr) {
     )
     .join('');
   galleryEl.insertAdjacentHTML('beforeend', markup);
-  gallery.refresh();
+  gallery.refresh(); // Обновляем галерею SimpleLightbox
 }
 
+// Функция очистки контейнера галереи
 function clearContainer() {
   galleryEl.innerHTML = '';
 }
 
-let gallery = new SimpleLightbox('.simplelightbox', {
-  captionsData: 'alt',
-  captionDelay: 250,
-});
+// Функция для загрузки дополнительных результатов
+async function onLoadmore() {
+  try {
+    const cards = await apiService.fetchCard(); // Загружаем дополнительные результаты
+    createMarkup(cards.hits); // Добавляем новые результаты в галерею
 
-function smoothScroll() {
-  const { height: cardHeight } =
-    galleryEl.firstElementChild.getBoundingClientRect();
+    if (apiService.page !== 0 && cards.hits.length === 0) {
+      Notiflix.Notify.failure(
+        "We're sorry, but you've reached the end of search results."
+      );
+      observer.disconnect(); // Отключаем Observer, если больше нечего загружать
+    }
 
-  window.scrollBy({
-    top: cardHeight * 2,
-    behavior: 'smooth',
-  });
+    // smoothScroll(); // Плавная прокрутка после добавления новых изображений
+  } catch (error) {
+    console.log(error);
+  }
 }
+
+// Функция для плавной прокрутки
+// function smoothScroll() {
+//   const { height: cardHeight } =
+//     galleryEl.firstElementChild.getBoundingClientRect();
+
+//   window.scrollBy({
+//     top: cardHeight * 2,
+//     behavior: 'smooth',
+//   });
+// }
